@@ -101,11 +101,14 @@ factor toks          = Left $ "Error:In factor: Couldn't parse\n" ++ show toks
 
 
 main = do
-  tokList <- mlex
-  let parseRes = exp1 tokList
-  case parseRes of
-    Left str -> putStrLn (str ++ "fart")
-    Right [] -> putStrLn "Parse Successful.\n"
+  output <- mlex
+  case output of 
+    Left lexStr -> putStrLn lexStr
+    Right tokList -> do
+      let parseRes = exp1 tokList
+      case parseRes of
+        Left str -> putStrLn str
+        Right [] -> putStrLn "Parse Successful.\n"
 
      
     

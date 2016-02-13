@@ -186,15 +186,15 @@ lexError s = do
          else " at end of file"))
 
 
-mlex :: IO [Lexeme]
+mlex :: IO (Either String [Lexeme])
 mlex = do
   putStrLn "Enter the input"
   s <- getLine 
   let etok = tokens s
   case etok of
     Right a -> do  
-      return a 
+      return (Right a)
     Left str -> do  
-	  lexError str
+	  return (Left str)
 
 }
