@@ -1,9 +1,10 @@
 module Main where
 import MLexer
 import Text.PrettyPrint
+import Text.PrettyPrint.GenericPretty
 
-data Expr =  EAdd Expr Expr 
-           | EMul Expr Expr
+data Expr a = EAdd (Expr a) (Expr a)
+           | EMul (Expr a) (Expr a)
            | ENum Int 
            deriving (Eq,Show,Read)
 
@@ -22,28 +23,28 @@ more_term -> * factor more_term    more_term (MUL:ts) = more_term (factor ts)
 
 factor -> NUM.                     factor ((NUM n):ts) = ts
 -}
-exp1:: [Lexeme] -> Either String ([Lexeme],Expr)
+exp1:: [Lexeme] -> Either String ([Lexeme],Expr Int)
 exp1 ts = do
     (rem,e) <- term ts  
     more_exp e rem 
 
 ---------------------------------------------
 
-more_exp :: Expr -> [Lexeme] ->  Either String ([Lexeme],Expr)
+more_exp :: Expr Int -> [Lexeme] ->  Either String ([Lexeme],Expr Int)
 more_exp e (LEX ADD _:ts)  = do 
         (rem,e') <- term ts
         more_exp (EAdd e e') rem 
 more_exp e ts        = Right (ts,e) 
 ----------------------------------------------
 
-term :: [Lexeme] -> Either String ([Lexeme],Expr)
+term :: [Lexeme] -> Either String ([Lexeme],Expr Int)
 term  ts           = do
        (rem,e) <- factor ts
        more_term e rem 
 
 -----------------------------------------------
 
-more_term :: Expr -> [Lexeme] -> Either String ([Lexeme],Expr)
+more_term :: Expr Int -> [Lexeme] -> Either String ([Lexeme],Expr Int)
 more_term e (LEX MUL _:ts) = do 
     (rem,e') <- factor ts
     more_term (EMul e e') rem 
@@ -51,12 +52,20 @@ more_term e ts       = Right (ts,e)
 
 -----------------------------------------------
 
-factor :: [Lexeme] ->  Either String ([Lexeme],Expr)
+factor :: [Lexeme] ->  Either String ([Lexeme],Expr Int)
 factor ((LEX (NUM n) _):ts)  = Right (ts,ENum n)
 factor toks          = Left $ "Error:In factor: Couldn't parse\n" ++ show toks
                               ++ "\nExpecting a number got " ++ show (head toks) 
 
 
+instance (Out a) => Out (Expr a) where
+  doc (ENum a) =  parens $ text "Num" <+> doc a
+  doc (EMul a b) = parens $ text "Mul" $$ nest 1 (doc a) 
+                                                    $$ nest 1 (doc b)
+  doc (EAdd a b) = parens $ text "Add" $$ nest 1 (doc a) 
+                                                    $$ nest 1 (doc b)
+  docPrec _ = doc
+  
 main = do
 	output <- mlex
 	case output of 
@@ -67,7 +76,8 @@ main = do
 				Left str -> putStrLn str 
 				Right ([],ast) -> do
 					putStrLn "Parse Successful.\n"
-					putStrLn $ "AST is :\n" ++ show ast 
+					putStrLn $ "AST is :\n" 
+					pp ast
 
      
     
