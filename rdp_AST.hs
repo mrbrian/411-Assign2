@@ -1,5 +1,6 @@
 module Main where
 import MLexer
+import Text.PrettyPrint
 
 data Expr =  EAdd Expr Expr 
            | EMul Expr Expr

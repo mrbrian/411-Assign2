@@ -3,7 +3,8 @@ import MLexer
 
 data Exp = Add Exp Exp
 		| Mul Exp Exp
-		| Num Integer
+		| Num Int
+  deriving (Show)
 
 {-     
 Grammar                            Haskell Code
@@ -165,34 +166,86 @@ factor (LEX SUB _ : LEX (NUM i) _ : ts) = Right ts
 rparpart :: [Lexeme] -> Either String [Lexeme]
 rparpart (LEX RPAR _:ts) = Right ts
 
+
+term1:: [(Pos,Token)] -> (Exp -> Exp,[(Pos,Token)])   
+   term1 ((_,T_mul):ts) = (g,ts')  where
+			 (e', ts1) = factor ts
+			 (f, ts') = term1 ts1
+			 g x = f(MUL x e')                   --  g::  Exp -> Exp
+   term1 ts = (g,ts)  where
+			 g x = x                             --  g::  Exp -> Exp
+
 -}
+{-
+exp1:: [Lexeme] -> (Exp -> Exp,[Lexeme])   
+exp1 ts = (g,ts')  where
+		 (e', ts1) = term ts
+		 case ts1 of
+		   [] -> 
+		 (f, ts') = more_exp ts1
+		 g x = f (Mul x e')                   --  g::  Exp -> Exp           
+	-}	 
+	
+term1:: [(Pos,Token)] -> (Exp -> Exp,[(Pos,Token)])   
+term1 ((_,T_mul):ts) = (g,ts')  where
+		 (e', ts1) = factor ts
+		 (f, ts') = term1 ts1
+		 g x = f(MUL x e')                   --  g::  Exp -> Exp
+term1 ts = (g,ts)  where
+		 g x = x                                    --  g::  Exp -> Exp
+
+
+expr:: [(Pos,Token)] -> (Exp,[(Pos,Token)])
+expr ts = (f e,ts') where
+		  (e,ts1) = factor ts
+		  (f,ts') = term1 ts1
+			  
 exp1:: [Lexeme] -> Either String (Exp, [Lexeme])
-exp1 ts = (, rem2) where
-    rem1 <-  term ts  
-    rem2 <- more_exp rem1
-	
-	
+exp1 ts = do
+	(e1, rem1) <- term ts  -- must at least have a number.
+	case rem1 of
+		[] -> Right (e1, rem1)
+		_ -> do
+			(e2, rem2) <- more_exp e1 rem1
+			Right (Add e1 e2, rem2) 
+{-
+exp1 ts = do
+    (e1, rem1) <- term ts  -- must at least have a number.
+    (e2, rem2) <- more_exp e1 rem1
+    Right (Add e1 e2, rem2)		-- i need to know.. what next terminal is
+	-}
 ---------------------------------------------
 
 more_exp :: Exp -> [Lexeme] ->  Either String (Exp, [Lexeme])
 more_exp e (LEX ADD p:ts)  = do 
-        rem <- term ts
-        more_exp rem 
-more_exp ts        = Right ts 
+        (e2, rem) <- term ts
+        more_exp e2 rem 
+more_exp e ts        = Right (e, ts)
+
 ----------------------------------------------
 
 term :: [Lexeme] -> Either String (Exp, [Lexeme])
-term ts           = do
-       rem <- factor ts
-       more_term rem 
-
+term ts = do
+       (e, rem) <- factor ts
+	   case rem of
+	     [] -> Right (e, rem)
+		 (LEX MUL p: ts') -> do
+		   (e2, rem2) <- more_term (Mul e,  rem 
+         tok -> Right ()
+	   
 -----------------------------------------------
 
 more_term :: Exp -> [Lexeme] -> Either String (Exp, [Lexeme])
+more_term e (LEX MUL p:ts) = do
+		(e1, ts1) <- factor ts		
+		(e2, ts2) <- more_term e ts1
+		Right (Mul e1 e2, ts)
+{-		
 more_term e (LEX MUL p:ts) = do 	-- multiply 
-    rem <- factor ts
-    more_term rem 
-more_term e ts       = Right ts		-- blank, what is the exp now?
+    (e, rem) <- factor ts
+    more_term e rem 
+-}
+more_term e ts = Right (e, ts)	-- blank, what is the exp now?
 
 -----------------------------------------------
 
@@ -200,13 +253,6 @@ factor :: [Lexeme] ->  Either String (Exp, [Lexeme])
 factor (LEX (NUM i) n:ts)  = Right (Num i, ts)
 factor toks          = Left $ "Error:In factor: Couldn't parse\n" ++ show toks
                               ++ "\nExpecting a number got " ++ show (head toks) 
-
-
-term1:: Exp -> [Lexeme] -> (Exp,[Lexeme])
-term1 e (LEX MUL _:ts) = (MUL e e',ts')  where
-		 (e1,ts1) = factor ts
-		 (e',ts') = term1 e1 ts1
-term1 e ts = (e,ts)
 
 
 main = do
@@ -217,7 +263,8 @@ main = do
       let parseRes = exp1 tokList
       case parseRes of
         Left str -> putStrLn str
-        Right [] -> putStrLn "Parse Successful.\n"
+        Right (e, []) -> putStrLn ("Parse Successful.\n" ++ show e)
+        Right (e, t) -> putStrLn ("Parse Successful??\n" ++ show e ++ show t)
 
      
     
