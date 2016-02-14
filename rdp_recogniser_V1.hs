@@ -1,6 +1,9 @@
 module Main where
 import MLexer
 
+data Exp = Add Exp Exp
+		| Mul Exp Exp
+		| Num Integer
 
 {-     
 Grammar                            Haskell Code
@@ -17,142 +20,21 @@ more_term -> * factor more_term    more_term (MUL:ts) = more_term (factor ts)
 
 factor -> NUM.                     factor ((NUM n):ts) = ts
 
-
-
-
-prog -> stmt.						
-stmt -> IF expr thenpart.
-stmt -> WHILE expr dopart.
-stmt -> INPUT ID.
-stmt -> ID ASSIGN expr.
-stmt -> WRITE expr.
-stmt -> BEGIN stmtlist endpart.
-thenpart -> THEN stmt elsepart.
-elsepart -> ELSE stmt.
-dopart -> DO stmt.
-endpart -> END.
-*stmtlist -> *stmtlist2.
-*stmtlist2 -> stmt semipart.
-*stmtlist2 -> .
-semipart -> SEMICOLON stmtlist2.
-expr -> term *expr2.
-*expr2 -> addop term *expr2.
-*expr2 -> .
-addop -> ADD.
-addop -> SUB.
-term -> factor *term2.
-*term2 -> mulop factor *term2.
-*term2 -> .
-mulop -> MUL.
-mulop -> DIV.
-factor -> LPAR expr rparpart.
-factor -> ID.
-factor -> NUM.
-factor -> SUB NUM.
-rparpart -> RPAR.
-
 -}
+
 {-
-
-prog :: [Lexeme] -> Either String [Lexeme]
-prog ts = stmt ts	
-
-stmt :: [Lexeme] -> Either String [Lexeme]
-stmt (LEX IF 		_:ts) = thenpart (expr ts)
-stmt (LEX WHILE 	_:ts) = dopart (expr ts)
-stmt (LEX INPUT ID 	_:ts) = ts  
-stmt (LEX ID ASSIGN _:ts) = expr ts
-stmt (LEX WRITE 	_:ts) = expr ts
-stmt (LEX BEGIN 	_:ts) = endpart (stmtlist ts)
-
-thenpart :: [Lexeme] -> Either String [Lexeme]
-thenpart ts = elsepart (stmt ts)
-
-elsepart :: [Lexeme] -> Either String [Lexeme]
-elsepart ts = stmt ts
-
-dopart :: [Lexeme] -> Either String [Lexeme]
-dopart ts = stmt ts
-
-endpart :: [Lexeme] -> Either String [Lexeme]
-endpart ts = ts
-	
-stmtlist :: [Lexeme] -> Either String [Lexeme]
-stmtlist ts = stmtlist2 ts
-
-stmtlist2 :: [Lexeme] -> Either String [Lexeme]
-stmtlist2 ts = semipart (stmt ts)
-stmtlist2 _ = ts
-
-semipart :: [Lexeme] -> Either String [Lexeme]
-semipart (LEX SEMICOLON _:ts) = stmtlist2 ts 
-
-expr :: [Lexeme] -> Either String [Lexeme]
-expr ts = expr2 (term ts)
-
-expr2 :: [Lexeme] -> Either String [Lexeme]
-expr2 -> addop term *expr2.
-expr2 -> .
-
-addop :: [Lexeme] -> Either String [Lexeme]
-addop (LEX ADD _:ts) = ts
-addop (LEX SUB _:ts) = ts
-
-term :: [Lexeme] -> Either String [Lexeme]
-term ts =  term2 (factor ts)
-
-term2 :: [Lexeme] -> Either String [Lexeme]
-term2 -> mulop factor *term2.
-term2 -> .
-
-mulop :: [Lexeme] -> Either String [Lexeme]
-mulop (LEX MUL _:ts) = ts
-mulop (LEX DIV _:ts) = ts
-
-factor :: [Lexeme] -> Either String [Lexeme]
-factor (LEX LPAR _:ts) = rparpart (expr ts)
-factor (LEX ID _:ts) = ts
-factor (LEX (NUM i) _:ts) = ts
-factor (LEX SUB _: LEX (NUM i) _ : ts)  = ts
-
-rparpart :: [Lexeme] -> Either String [Lexeme]
-rparpart -> RPAR.
-	
-	-}
-	{-
-exp1:: [Lexeme] -> Either String [Lexeme]
-exp1  ts = more_exp rem
-	where
-		(Right rem) = term ts
----------------------------------------------
-
-more_exp :: [Lexeme] ->  Either String [Lexeme]
-more_exp (LEX ADD p:ts)  = more_exp rem
-more_exp ts        = Right ts 
-	where
-		(Right rem) = term ts
-----------------------------------------------
-
-term :: [Lexeme] -> Either String [Lexeme]
-term  ts           = more_term rem
-	where
-		(Right rem) = factor ts
-
------------------------------------------------
-
-more_term :: [Lexeme] -> Either String [Lexeme]
-more_term (LEX MUL p:ts) = more_term rem
-more_term ts       = Right ts
-	where
-		(Right rem) = factor ts
-
------------------------------------------------
-
-factor :: [Lexeme] ->  Either String [Lexeme]
-factor ((LEX (NUM i) n):ts)  = Right ts
-factor toks          = Left $ "Error:In factor: Couldn't parse\n" ++ show toks
-                              ++ "\nExpecting a number got " ++ show (head toks) 
--}
+data Stmt = If Exp Stmt Stmt                        -- datatype for statements  starting with an if ... then ... else statement
+			| While Exp Stmt
+			| Assign String Exp
+			| Block [Stmt]
+			| Print Expr
+			| Input Expr
+				
+data Exp = Add Exp Exp  
+		   | Mul Exp Exp
+		   | Div Exp Exp
+		   | Id String
+		   | Num Integer
 
 
 
@@ -283,49 +165,56 @@ factor (LEX SUB _ : LEX (NUM i) _ : ts) = Right ts
 rparpart :: [Lexeme] -> Either String [Lexeme]
 rparpart (LEX RPAR _:ts) = Right ts
 
-{-	
-exp1:: [Lexeme] -> Either String [Lexeme]
-exp1  ts = do
-    rem <-  term ts  
-    more_exp rem 
+-}
+exp1:: [Lexeme] -> Either String (Exp, [Lexeme])
+exp1 ts = (, rem2) where
+    rem1 <-  term ts  
+    rem2 <- more_exp rem1
+	
 	
 ---------------------------------------------
 
-more_exp :: [Lexeme] ->  Either String [Lexeme]
-more_exp (LEX ADD p:ts)  = do 
+more_exp :: Exp -> [Lexeme] ->  Either String (Exp, [Lexeme])
+more_exp e (LEX ADD p:ts)  = do 
         rem <- term ts
         more_exp rem 
 more_exp ts        = Right ts 
 ----------------------------------------------
 
-term :: [Lexeme] -> Either String [Lexeme]
-term  ts           = do
+term :: [Lexeme] -> Either String (Exp, [Lexeme])
+term ts           = do
        rem <- factor ts
        more_term rem 
 
 -----------------------------------------------
 
-more_term :: [Lexeme] -> Either String [Lexeme]
-more_term (LEX MUL p:ts) = do 
+more_term :: Exp -> [Lexeme] -> Either String (Exp, [Lexeme])
+more_term e (LEX MUL p:ts) = do 	-- multiply 
     rem <- factor ts
     more_term rem 
-more_term ts       = Right ts
+more_term e ts       = Right ts		-- blank, what is the exp now?
 
 -----------------------------------------------
 
-factor :: [Lexeme] ->  Either String [Lexeme]
-factor ((LEX (NUM i) n):ts)  = Right ts
+factor :: [Lexeme] ->  Either String (Exp, [Lexeme])
+factor (LEX (NUM i) n:ts)  = Right (Num i, ts)
 factor toks          = Left $ "Error:In factor: Couldn't parse\n" ++ show toks
                               ++ "\nExpecting a number got " ++ show (head toks) 
 
--}
-							  
+
+term1:: Exp -> [Lexeme] -> (Exp,[Lexeme])
+term1 e (LEX MUL _:ts) = (MUL e e',ts')  where
+		 (e1,ts1) = factor ts
+		 (e',ts') = term1 e1 ts1
+term1 e ts = (e,ts)
+
+
 main = do
   output <- mlex
   case output of 
     Left lexStr -> putStrLn lexStr
     Right tokList -> do
-      let parseRes = prog tokList
+      let parseRes = exp1 tokList
       case parseRes of
         Left str -> putStrLn str
         Right [] -> putStrLn "Parse Successful.\n"
