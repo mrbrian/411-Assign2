@@ -221,7 +221,7 @@ main = do
 					case parseRes of
 						Left str -> putStrLn str
 						Right [] -> putStrLn ("Parse Successful.\n")
-						Right t -> putStrLn ("weird Parse Successful??\n" ++ show t)		
+						Right t -> errorMsg t
 		False -> do
 			output <- mlex2 args
 			case output of 
@@ -231,8 +231,9 @@ main = do
 					case parseRes of
 						Left str -> putStrLn str
 						Right [] -> putStrLn ("Parse Successful.\n")
-						Right t -> putStrLn ("weird Parse Successful??\n" ++ show t)
-				  
+						Right t -> errorMsg t
+errorMsg t = putStrLn ("Parse finished with tokens left?\n" ++ show t)
+
 {-
 main = do 
     args <- getArgs
