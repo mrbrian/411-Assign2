@@ -1,6 +1,8 @@
 module Main where
-import System.Environment
 import A2Lexer
+import System.Environment
+import Text.PrettyPrint
+import Text.PrettyPrint.GenericPretty
 
 {-     
 Grammar                            Haskell Code
@@ -53,46 +55,71 @@ rparpart -> RPAR.
 
 -}
 
-prog :: [Lexeme] -> Either String [Lexeme]
+data Stmt a = If (Exp a) (Stmt a) (Stmt a) 		-- datatype for statements  starting with an if ... then ... else statement
+			| While (Exp a) (Stmt a)
+			| Assign String (Exp a)
+			| Block [Stmt a]
+			| Print (Exp a)
+			| Input (Exp a)
+           deriving (Eq,Show,Read)
+				
+data Exp a = Add (Exp a) (Exp a)
+		   | Mul (Exp a) (Exp a)
+		   | Div (Exp a) (Exp a)
+		   | Neg (Exp a)
+		   | Id String
+		   | Num Int
+           deriving (Eq,Show,Read)
+
+		   
+prog :: [Lexeme] -> Either String ([Lexeme], Stmt String)
 prog ts = stmt ts
 	
 ---------------------------------------------
 
-stmt :: [Lexeme] -> Either String [Lexeme]
+stmt :: [Lexeme] -> Either String ([Lexeme], Stmt String)
 stmt (LEX IF _:ts) = do
-	rem <- expr ts
-	thenpart rem
+	(rem, e1) <- expr ts
+	(rem2, s1, s2) <- thenpart rem	
+	Right (rem2, If e1 s1 s2)
 stmt (LEX WHILE _:ts) = do
-	rem <- expr ts
-	dopart rem
-stmt (LEX INPUT _: LEX (ID str) _:ts) = Right ts
-stmt (LEX (ID str) _: LEX ASSIGN _:ts) = expr ts
-stmt (LEX WRITE _:ts) = expr ts
+	(rem, e1) <- expr ts
+	(rem2, s1) <- dopart rem
+	Right (rem2, While e1 s1)
+stmt (LEX INPUT _: LEX (ID str) _:ts) = Right (ts, Input (Id str))
+stmt (LEX (ID str) _: LEX ASSIGN _:ts) = do
+	(rem, e1) <- expr ts
+	Right (rem, Assign str e1)
+stmt (LEX WRITE _:ts) = do
+	(rem, e1) <- expr ts
+	Right (rem, Print e1)
 stmt (LEX BEGIN _:ts) = do
-	rem <- stmtlist ts
-	endpart rem
+	(rem, s1) <- stmtlist [] ts
+	rem2 <- endpart rem
+	Right (rem2, Block s1)
 stmt toks = Left $ "Error:In stmt: Couldn't parse\n" ++ show toks
               ++ "\nExpecting a STMT got " ++ show (head toks) 
 
 ---------------------------------------------
 
-thenpart :: [Lexeme] -> Either String [Lexeme]
+thenpart :: [Lexeme] -> Either String ([Lexeme], Stmt String, Stmt String)
 thenpart (LEX THEN _:ts) = do
-	rem <- stmt ts
-	elsepart rem
+	(rem1, s1) <- stmt ts
+	(rem2, s2) <- elsepart rem1
+	Right (rem2, s1, s2)
 thenpart toks = Left $ "Error:In thenpart: Couldn't parse\n" ++ show toks
               ++ "\nExpecting a THEN got " ++ show (head toks) 
 
 ---------------------------------------------
 
-elsepart :: [Lexeme] -> Either String [Lexeme]
+elsepart :: [Lexeme] -> Either String ([Lexeme], Stmt String)
 elsepart (LEX ELSE _:ts) = stmt ts
 elsepart toks = Left $ "Error:In elsepart: Couldn't parse\n" ++ show toks
               ++ "\nExpecting an ELSE got " ++ show (head toks) 
 			  
 ---------------------------------------------
 
-dopart :: [Lexeme] -> Either String [Lexeme]
+dopart :: [Lexeme] -> Either String ([Lexeme], Stmt String)
 dopart (LEX DO _:ts) = stmt ts
 dopart toks = Left $ "Error:In dopart: Couldn't parse\n" ++ show toks
               ++ "\nExpecting a DO got " ++ show (head toks) 
@@ -106,16 +133,17 @@ endpart toks = Left $ "Error:In endpart: Couldn't parse\n" ++ show toks
 
 ---------------------------------------------
 
-stmtlist :: [Lexeme] -> Either String [Lexeme]
-stmtlist ts = stmtlist2 ts
+stmtlist :: [Stmt String] -> [Lexeme] -> Either String ([Lexeme], [Stmt String])
+stmtlist e ts = stmtlist2 e ts
 
 ---------------------------------------------
 
-stmtlist2 :: [Lexeme] -> Either String [Lexeme]
-stmtlist2 (LEX IF _:ts) = do
-	rem1 <- expr ts
-	rem2 <- thenpart rem1
-	semipart rem2	
+stmtlist2 :: [Stmt String] -> [Lexeme] -> Either String ([Lexeme], [Stmt String])
+stmtlist2 e (LEX IF _:ts) = do
+	(rem1, e1) <- expr ts
+	(rem2, s1, s2) <- thenpart rem1
+	rem3 <- semipart rem2
+	Right (rem3, If e1 s1 s2 : e)
 stmtlist2 (LEX WHILE _:ts) = do
 	rem1 <- expr ts
 	rem2 <- dopart rem1
@@ -142,14 +170,14 @@ semipart toks = Left $ "Error:In semipart: Couldn't parse\n" ++ show toks
 
 ---------------------------------------------
 
-expr :: [Lexeme] -> Either String [Lexeme]
+expr :: [Lexeme] -> Either String ([Lexeme], Exp String)
 expr ts = do
-	rem <- term ts
+	(rem, e) <- term ts
 	expr2 rem	
 
 ---------------------------------------------
 
-expr2 :: [Lexeme] -> Either String [Lexeme]
+expr2 :: [Lexeme] -> Either String ([Lexeme], Exp String)
 expr2 (LEX ADD _:ts) = do
 	rem <- term ts
 	expr2 rem
@@ -160,14 +188,14 @@ expr2 ts = Right ts
 
 ---------------------------------------------
 	
-term :: [Lexeme] -> Either String [Lexeme]
+term :: [Lexeme] -> Either String ([Lexeme], Exp String)
 term ts = do
 	rem <- factor ts
 	term2 rem
 	
 ---------------------------------------------
 
-term2 :: [Lexeme] -> Either String [Lexeme]
+term2 :: [Lexeme] -> Either String ([Lexeme], Exp String)
 term2 (LEX MUL _:ts) = do
 	rem <- factor ts
 	term2 rem
@@ -178,20 +206,21 @@ term2 ts = Right ts
 
 ---------------------------------------------
 
-factor :: [Lexeme] -> Either String [Lexeme]
+factor :: [Lexeme] -> Either String ([Lexeme], Exp String)
 factor (LEX LPAR _:ts) = do
-	rem <- expr ts
-	rparpart rem
-factor (LEX (ID str) _:ts) = Right ts
-factor (LEX (NUM i) _:ts) = Right ts
-factor (LEX SUB _ : LEX (NUM i) _ : ts) = Right ts
+	(rem1, e) <- expr ts
+	rem2 <- rparpart rem1
+	Right (rem2, e)
+factor (LEX (ID str) _:ts) = Right (ts, Id str)
+factor (LEX (NUM i) _:ts) = Right (ts, Num i)
+factor (LEX SUB _ : LEX (NUM i) _ : ts) = Right (ts, Neg (Num i))
 factor toks = Left $ "Error:In factor: Couldn't parse\n" ++ show toks
               ++ "\nExpecting a NUM got " ++ show (head toks) 
 
 ---------------------------------------------
 	
 rparpart :: [Lexeme] -> Either String [Lexeme]
-rparpart (LEX RPAR _:ts) = Right ts
+rparpart (LEX RPAR _:ts) = Right (ts)
 rparpart toks = Left $ "Error:In rparpart: Couldn't parse\n" ++ show toks
               ++ "\nExpecting a RPAR got " ++ show (head toks) 
 
@@ -220,8 +249,10 @@ main = do
 					let parseRes = prog tokList
 					case parseRes of
 						Left str -> putStrLn str
-						Right [] -> putStrLn ("Parse Successful.\n")
-						Right t -> errorMsg t
+						Right ([], s) -> do
+							putStrLn ("Parse Successful.\n")
+							pp s						
+						Right (t, _) -> errorMsg t
 		False -> do
 			output <- mlex2 args
 			case output of 
@@ -230,8 +261,10 @@ main = do
 					let parseRes = prog tokList
 					case parseRes of
 						Left str -> putStrLn str
-						Right [] -> putStrLn ("Parse Successful.\n")
-						Right t -> errorMsg t
+						Right ([], s) -> do
+							putStrLn ("Parse Successful.\n")
+							pp s
+						Right (t, _) -> errorMsg t
 errorMsg t = putStrLn ("Parse finished with tokens left?\n" ++ show t)
 
 {-
