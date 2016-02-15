@@ -7,18 +7,6 @@ import Text.PrettyPrint.GenericPretty
 {-     
 Grammar                            Haskell Code
 =======                            ============
-exp -> term more_exp               exp ts = more_exp (term ts)
-
-more_exp -> + term more_exp        more_exp (ADD:ts) = more_exp (term ts)
-          |.                       more_exp ts = ts
-
-term -> factor more_term           term ts = more_term (factor ts)
-
-more_term -> * factor more_term    more_term (MUL:ts) = more_term (factor ts)
-           |.                      more_term ts = ts
-
-factor -> NUM.                     factor ((NUM n):ts) = ts
-
 prog -> stmt.
 stmt -> IF expr thenpart.
 stmt -> WHILE expr dopart.
@@ -142,67 +130,67 @@ stmtlist2 :: [Stmt String] -> [Lexeme] -> Either String ([Lexeme], [Stmt String]
 stmtlist2 e (LEX IF _:ts) = do
 	(rem1, e1) <- expr ts
 	(rem2, s1, s2) <- thenpart rem1
-	rem3 <- semipart rem2
-	Right (rem3, If e1 s1 s2 : e)
-stmtlist2 (LEX WHILE _:ts) = do
-	rem1 <- expr ts
-	rem2 <- dopart rem1
-	semipart rem2	
-stmtlist2 (LEX INPUT _: LEX (ID str) _:ts) = semipart ts	
-stmtlist2 (LEX (ID str) _: LEX ASSIGN _:ts) = do
-	rem1 <- expr ts
-	semipart rem1
-stmtlist2 (LEX WRITE _:ts) = do
-	rem1 <- expr ts
-	semipart rem1
-stmtlist2 (LEX BEGIN _:ts) = do
-	rem1 <- stmtlist ts
+	(rem3, es) <- semipart e rem2
+	Right (rem3, e++[If e1 s1 s2])
+stmtlist2 e (LEX WHILE _:ts) = do
+	(rem1, e1) <- expr ts
+	(rem2, s1) <- dopart rem1
+	semipart (e++[While e1 s1]) rem2	
+stmtlist2 e (LEX INPUT _: LEX (ID str) _:ts) = semipart (e++[Input (Id str)]) ts	
+stmtlist2 e (LEX (ID str) _: LEX ASSIGN _:ts) = do
+	(rem1, e1) <- expr ts
+	semipart (e++[Assign str e1]) rem1
+stmtlist2 e (LEX WRITE _:ts) = do
+	(rem1, e1) <- expr ts
+	semipart (e++[Print e1]) rem1
+stmtlist2 e (LEX BEGIN _:ts) = do
+	(rem1, e1) <- stmtlist e ts
 	rem2 <- endpart rem1
-	semipart rem2	
-stmtlist2 ts = Right ts
+	semipart (e1++e) rem2	
+stmtlist2 e ts = Right (ts, e)
 
 ---------------------------------------------
 
-semipart :: [Lexeme] -> Either String [Lexeme]
-semipart (LEX SEMICOLON _:ts) = stmtlist2 ts
-semipart toks = Left $ "Error:In semipart: Couldn't parse\n" ++ show toks
+semipart :: [Stmt String] -> [Lexeme] -> Either String ([Lexeme], [Stmt String])
+semipart es (LEX SEMICOLON _:ts) = stmtlist2 es ts
+semipart es toks = Left $ "Error:In semipart: Couldn't parse\n" ++ show toks
               ++ "\nExpecting a SEMICOLON got " ++ show (head toks) 
 
 ---------------------------------------------
 
 expr :: [Lexeme] -> Either String ([Lexeme], Exp String)
 expr ts = do
-	(rem, e) <- term ts
-	expr2 rem	
+	(rem1, e1) <- term ts
+	expr2 e1 rem1	
 
 ---------------------------------------------
 
-expr2 :: [Lexeme] -> Either String ([Lexeme], Exp String)
-expr2 (LEX ADD _:ts) = do
-	rem <- term ts
-	expr2 rem
-expr2 (LEX SUB _:ts) = do
-	rem <- term ts
-	expr2 rem
-expr2 ts = Right ts
+expr2 :: Exp String -> [Lexeme] -> Either String ([Lexeme], Exp String)
+expr2 e (LEX ADD _:ts) = do
+	(rem1, e1) <- term ts
+	expr2 (Add e e1) rem1	
+expr2 e (LEX SUB _:ts) = do
+	(rem1, e1) <- term ts
+	expr2 (Neg e1) rem1
+expr2 e ts = Right (ts, e)
 
 ---------------------------------------------
 	
 term :: [Lexeme] -> Either String ([Lexeme], Exp String)
 term ts = do
-	rem <- factor ts
-	term2 rem
+	(rem, e) <- factor ts
+	term2 e rem
 	
 ---------------------------------------------
 
-term2 :: [Lexeme] -> Either String ([Lexeme], Exp String)
-term2 (LEX MUL _:ts) = do
-	rem <- factor ts
-	term2 rem
-term2 (LEX DIV _:ts) = do
-	rem <- factor ts
-	term2 rem
-term2 ts = Right ts
+term2 :: Exp String -> [Lexeme] -> Either String ([Lexeme], Exp String)
+term2 es (LEX MUL _:ts) = do
+	(rem1, e1) <- factor ts
+	term2 (Mul es e1) rem1
+term2 es (LEX DIV _:ts) = do
+	(rem1, e1) <- factor ts
+	term2 (Div es e1) rem1
+term2 es ts = Right (ts, es)
 
 ---------------------------------------------
 
@@ -225,19 +213,35 @@ rparpart toks = Left $ "Error:In rparpart: Couldn't parse\n" ++ show toks
               ++ "\nExpecting a RPAR got " ++ show (head toks) 
 
 ---------------------------------------------
-{-
-main = do
-  output <- mlex
-  case output of 
-    Left lexStr -> putStrLn lexStr
-    Right tokList -> do
-      let parseRes = prog tokList
-      case parseRes of
-        Left str -> putStrLn str
-        Right [] -> putStrLn ("Parse Successful.\n")
-        Right t -> putStrLn ("weird Parse Successful??\n" ++ show t)
-	-}
+ 
+instance (Out a) => Out (Stmt a) where
+  doc (If a b c) = text "If" $$ nest 2 (doc a) 
+                                                    $$ nest 2 (doc b)
+                                                    $$ nest 2 (doc c)
+  doc (While a b) = text "While" <+> doc a 
+                                                    $$ nest 2 (doc b)                                                  
+  doc (Assign a b) = text "Assign" <+> doc a 
+                                                    $$ nest 2 (doc b)
+  doc (Block a) = text "Block" $$ nest 2 (doc a) 
+  doc (Print a) = text "Print" <+> doc a
+  doc (Input a) = text "Input" <+> doc a
 
+  docPrec _ = doc
+  
+instance (Out a) => Out (Exp a) where
+  doc (Add a b) = parens $ text "Mul" $$ nest 2 (doc a) 
+                                                    $$ nest 2 (doc b)
+  doc (Mul a b) = parens $ text "Mul" $$ nest 2 (doc a) 
+                                                    $$ nest 2 (doc b)
+  doc (Div a b) = parens $ text "Div" $$ nest 2 (doc a) 
+                                                    $$ nest 2 (doc b)
+  doc (Neg a) = parens $ text "Neg" <+> doc a
+  doc (Id a) = parens $ text "Id" <+> doc a
+  doc (Num a) = parens $ text "Num" <+> doc a
+
+  docPrec _ = doc
+  
+  
 main = do 
 	args <- getArgs
 	case length args == 0 of
@@ -251,6 +255,7 @@ main = do
 						Left str -> putStrLn str
 						Right ([], s) -> do
 							putStrLn ("Parse Successful.\n")
+							putStrLn $ "AST is :\n" 
 							pp s						
 						Right (t, _) -> errorMsg t
 		False -> do
@@ -263,25 +268,7 @@ main = do
 						Left str -> putStrLn str
 						Right ([], s) -> do
 							putStrLn ("Parse Successful.\n")
+							putStrLn $ "AST is :\n" 
 							pp s
 						Right (t, _) -> errorMsg t
 errorMsg t = putStrLn ("Parse finished with tokens left?\n" ++ show t)
-
-{-
-main = do 
-    args <- getArgs
-    case length args == 0 of
-        True  -> do 
-               let usage = "\nExpecting of the form < ./eng_lang inputfile > got < ./eng_lang >.\n\nTry again. :(\n"
-               error $ "\n****************Error: Expecting file name as an argument." ++ usage
-        False -> do
-            let fname  = args !! 0 
-            conts <- readFile fname
-            let etok = tokens conts 
-            case etok of
-               Right tok -> do
-                   putStrLn "\n**************************************\n"
-                   putStrLn "The List of tokens are as follows.\n"
-                   mapM_ (putStrLn.show) tok
-               Left msg -> do  
-                  putStrLn msg    -}
