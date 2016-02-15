@@ -1,4 +1,5 @@
 module Main where
+import System.Environment
 import A2Lexer
 
 {-     
@@ -69,7 +70,7 @@ stmt (LEX (ID str) _: LEX ASSIGN _:ts) = expr ts
 stmt (LEX WRITE _:ts) = expr ts
 stmt (LEX BEGIN _:ts) = do
 	rem <- stmtlist ts
-	endpart ts
+	endpart rem
 stmt toks = Left $ "Error:In stmt: Couldn't parse\n" ++ show toks
               ++ "\nExpecting a STMT got " ++ show (head toks) 
 
@@ -112,18 +113,24 @@ stmtlist ts = stmtlist2 ts
 
 stmtlist2 :: [Lexeme] -> Either String [Lexeme]
 stmtlist2 (LEX IF _:ts) = do
-	rem <- expr ts
-	rem <- thenpart rem
-	semipart rem	
+	rem1 <- expr ts
+	rem2 <- thenpart rem1
+	semipart rem2	
 stmtlist2 (LEX WHILE _:ts) = do
-	rem <- expr ts
-	dopart rem
-stmtlist2 (LEX INPUT _: LEX (ID str) _:ts) = Right ts
-stmtlist2 (LEX (ID str) _: LEX ASSIGN _:ts) = expr ts
-stmtlist2 (LEX WRITE _:ts) = expr ts
+	rem1 <- expr ts
+	rem2 <- dopart rem1
+	semipart rem2	
+stmtlist2 (LEX INPUT _: LEX (ID str) _:ts) = semipart ts	
+stmtlist2 (LEX (ID str) _: LEX ASSIGN _:ts) = do
+	rem1 <- expr ts
+	semipart rem1
+stmtlist2 (LEX WRITE _:ts) = do
+	rem1 <- expr ts
+	semipart rem1
 stmtlist2 (LEX BEGIN _:ts) = do
-	rem <- stmtlist ts
-	endpart ts
+	rem1 <- stmtlist ts
+	rem2 <- endpart rem1
+	semipart rem2	
 stmtlist2 ts = Right ts
 
 ---------------------------------------------
@@ -189,8 +196,7 @@ rparpart toks = Left $ "Error:In rparpart: Couldn't parse\n" ++ show toks
               ++ "\nExpecting a RPAR got " ++ show (head toks) 
 
 ---------------------------------------------
-
-
+{-
 main = do
   output <- mlex
   case output of 
@@ -201,7 +207,32 @@ main = do
         Left str -> putStrLn str
         Right [] -> putStrLn ("Parse Successful.\n")
         Right t -> putStrLn ("weird Parse Successful??\n" ++ show t)
-		
+	-}
+
+main = do 
+	args <- getArgs
+	case length args == 0 of
+		True  -> do 
+			output <- mlex
+			case output of 
+				Left lexStr -> putStrLn lexStr
+				Right tokList -> do
+					let parseRes = prog tokList
+					case parseRes of
+						Left str -> putStrLn str
+						Right [] -> putStrLn ("Parse Successful.\n")
+						Right t -> putStrLn ("weird Parse Successful??\n" ++ show t)		
+		False -> do
+			output <- mlex2 args
+			case output of 
+				Left lexStr -> putStrLn lexStr
+				Right tokList -> do
+					let parseRes = prog tokList
+					case parseRes of
+						Left str -> putStrLn str
+						Right [] -> putStrLn ("Parse Successful.\n")
+						Right t -> putStrLn ("weird Parse Successful??\n" ++ show t)
+				  
 {-
 main = do 
     args <- getArgs

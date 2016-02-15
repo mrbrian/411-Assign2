@@ -197,4 +197,16 @@ mlex = do
     Left str -> do  
 	  return (Left str)
 
+mlex2 args = do 
+	let fname  = args !! 0 
+	conts <- readFile fname
+	let etok = tokens conts 
+	case etok of
+		Right tok -> do
+			putStrLn "\n**************************************\n"
+			putStrLn "The List of tokens are as follows.\n"
+			mapM_ (putStrLn.show) tok
+			return (Right tok)
+		Left msg -> do  
+			return (Left msg)
 }
