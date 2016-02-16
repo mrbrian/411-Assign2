@@ -60,7 +60,7 @@ shower n (Block (s:rem)) = (n2, str1 ++ str2)
 
 shower n (Assign s e) = (n, (showExp e)++"LOAD " ++ s ++ "\n" )
 shower n (Input (Id s)) = 
-	   ( n, "LOAD " ++ s ++ "\n" )   
+	   ( n, "READ " ++ s ++ "\n" )   
 shower n (Print e) = 
-	   ( n, (showExp e)++"\n"++"PRINT\n" )   
+	   ( n, (showExp e)++"PRINT\n" )   
 	   

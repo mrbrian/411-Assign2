@@ -41,7 +41,23 @@ factor -> NUM.
 factor -> SUB NUM.
 rparpart -> RPAR.
 
+data AST = Stmt
+			| Exp
+			
+data MachCode = [Instruction]
+
+data Instruction = cPUSH k --- push constant k onto stack 
+			| rPUSH r --- push contents of register r onto stack 
+			| sPUSH --- replaces the top element of the stack by the element it indexes in the stack
+			| LOAD r --- pop the top of the stack and put the value in register r 
+			| OPn?? --- perform the operation on the top n values of the stack replacing them by the result
+			| cJUMP L --- conditional goto L (a label) pops top of stack and if it is zero (false) it jumps to label
+			| JUMP L --- unconditional jump to label 
+			| PRINT --- pops and prints the top element of the stack 
+			| READ r --- reads a value into register r (actually it reads a line and uses the first value on the line ...)
+
 -}
+
 
 data Stmt a = If (Exp a) (Stmt a) (Stmt a) 		-- datatype for statements  starting with an if ... then ... else statement
 			| While (Exp a) (Stmt a)
@@ -218,11 +234,11 @@ instance (Out a) => Out (Stmt a) where
   doc (If a b c) = text "If" $$ nest 2 (doc a) 
                                                     $$ nest 2 (doc b)
                                                     $$ nest 2 (doc c)
-  doc (While a b) = text "While" <+> doc a 
+  doc (While a b) = text "While" $$ nest 2 (doc a) 
                                                     $$ nest 2 (doc b)                                                  
-  doc (Assign a b) = text "Assign" <+> doc a 
+  doc (Assign a b) = text "Assign" $$ nest 2 (doc a)
                                                     $$ nest 2 (doc b)
-  doc (Block a) = text "Block" $$ nest 2 (doc a) 
+  doc (Block a) = text "Block" <+> doc a
   doc (Print a) = text "Print" <+> doc a
   doc (Input a) = text "Input" <+> doc a
 
@@ -241,6 +257,62 @@ instance (Out a) => Out (Exp a) where
 
   docPrec _ = doc
   
+  {-
+genMachineCode :: AST -> MachCode
+genMachineCode a = 	-- base case   leaf node.
+genMachineCode (Add a b) = (PUSH :PUSH: OP2
+	-}
+
+	
+showExp ::  Exp String -> String
+showExp (Id s) = "rPUSH "++(show s)++"\n"
+showExp (Add a b) = (showExp a)++(showExp b)++"\nOP2 +\n"
+showExp (Mul a b) = (showExp a)++(showExp b)++"\nOP2 *\n"
+showExp (Div a b) = (showExp a)++(showExp b)++"\nOP2 /\n"
+showExp (Neg a) = (showExp a)++"\nOP1 -\n"
+showExp (Num i) = "cPUSH "++(show i)++"\n"
+
+shower ::  Int  ->  Stmt String -> (Int, String)
+shower n (If e s1 s2) = 
+	   ( m, (show e) ++"cJUMP label"++(show n)++"\n"
+						 ++ code1
+						 ++"JUMP label"++(show (n+1))++"\n"
+						 ++"label"++(show n)++":\n"
+						 ++code2
+						 ++"label"++(show (n+1))++":\n"
+		 )   where
+	  (n',code1) = shower (n+2) s1
+	  (m, code2) = shower n' s2
+shower n (While e s) = (n', "label"++(show n)++"\n"
+						 ++ (showExp e)
+						 ++ "cJUMP label"++(show (n+1))++"\n"
+						 ++ code
+						 ++ "JUMP label" ++ (show n)++ "\n" )  
+      where
+	    (n', code) = shower (n+2) s
+{-
+
+check:
+exp
+cJUMP out
+statement
+JUMP check
+out:
+
+-}
+
+shower n (Block []) = (n, "")
+shower n (Block (s:rem)) = (n2, str1 ++ str2)
+	   where 
+	   (n1, str1) = shower n s
+	   (n2, str2) = shower n1 (Block rem)
+
+shower n (Assign s e) = (n, (showExp e)++"LOAD " ++ s ++ "\n" )
+shower n (Input (Id s)) = 
+	   ( n, "READ " ++ s ++ "\n" )   
+shower n (Print e) = 
+	   ( n, (showExp e)++"PRINT\n" )   
+	   
   
 main = do 
 	args <- getArgs
@@ -256,7 +328,9 @@ main = do
 						Right ([], s) -> do
 							putStrLn ("Parse Successful.\n")
 							putStrLn $ "AST is :\n" 
-							pp s						
+							pp s				
+							let (n, outStr) = shower 0 s
+							writeFile "output" outStr
 						Right (t, _) -> errorMsg t
 		False -> do
 			output <- mlex2 args
@@ -270,5 +344,9 @@ main = do
 							putStrLn ("Parse Successful.\n")
 							putStrLn $ "AST is :\n" 
 							pp s
+							let (n, outStr) = shower 0 s
+							writeFile "output" outStr
 						Right (t, _) -> errorMsg t
 errorMsg t = putStrLn ("Parse finished with tokens left?\n" ++ show t)
+
+
