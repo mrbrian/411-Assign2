@@ -238,9 +238,9 @@ instance (Out a) => Out (Stmt a) where
                                                     $$ nest 2 (doc b)                                                  
   doc (Assign a b) = text "Assign" $$ nest 2 (doc a)
                                                     $$ nest 2 (doc b)
-  doc (Block a) = text "Block" <+> doc a
-  doc (Print a) = text "Print" <+> doc a
-  doc (Input a) = text "Input" <+> doc a
+  doc (Block a) = text "Block" $$ nest 2 (doc a)
+  doc (Print a) = text "Print" $$ nest 2 (doc a)
+  doc (Input a) = text "Input" $$ nest 2 (doc a)
 
   docPrec _ = doc
   
@@ -283,7 +283,7 @@ shower n (If e s1 s2) =
 		 )   where
 	  (n',code1) = shower (n+2) s1
 	  (m, code2) = shower n' s2
-shower n (While e s) = (n', "label"++(show n)++"\n"
+shower n (While e s) = (n', "label"++(show n)++":\n"
 						 ++ (showExp e)
 						 ++ "cJUMP label"++(show (n+1))++"\n"
 						 ++ code
@@ -349,4 +349,5 @@ main = do
 						Right (t, _) -> errorMsg t
 errorMsg t = putStrLn ("Parse finished with tokens left?\n" ++ show t)
 
+-- Fix a-b as a while expression
 

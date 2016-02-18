@@ -4,12 +4,12 @@
     is input  */
 
 begin
-    read x;                    % input a number .. 
+    input x;                    % input a number .. 
     y:= 1;
     while x do
         begin
           y:= y * x;
           x:= x - 1;
         end;
-     print y;
+     write y;
 end 

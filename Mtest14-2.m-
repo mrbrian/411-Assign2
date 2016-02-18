@@ -1,10 +1,10 @@
  
 begin
 
-    read y;
+    input y;
     if y then x:= 10
          else x:= 1;
     z:= y * x;
-    print z;
+    write z;
 
 end
