@@ -1,13 +1,8 @@
-% block
+% error handling
 
 begin
-    input x;                    % input a number .. 
-    z := 1;
-    y := 1;
-    while (x*2) do
-        begin
-            y :=  y * x;
-            x :=  x - 1;
-         end;
-    write y;
+	x:=1 %;    error  no semicolon
+	y:=0; 
+	if (x) then y:=10; % else y := 100;      % error, no else
+	while (x)  %  do x:=1;     %error no do
 end

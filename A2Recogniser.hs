@@ -277,6 +277,5 @@ main = do
 							let (n, outStr) = showStmt 1 ast							
 							putStrLn ("Exporting results to: \""++ fname ++"\".\n")
 							writeFile fname outStr
-						Right (t, _) -> errorMsg t
-errorMsg t = putStrLn ("Parse finished with tokens left?\n" ++ show t)
+						Right (t, _) -> putStrLn ("Parse finished with tokens left?\n" ++ show t)
 

@@ -1,3 +1,5 @@
+% nested loops
+
 begin
 	y := 100;
 	x := 100;

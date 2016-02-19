@@ -6,12 +6,27 @@ T02
 Description
 ===========
 	Parser/Stack code generator	
-
+	- requires GenericPretty library (https://hackage.haskell.org/package/GenericPretty)
+	
 Usage:
 ======
+	make	
 	./A2Recogniser <input file> <output file>
 		- Parses the given input file and outputs the machine code to the output file
-
+	
+Files included:
+===============
+	makefile
+	README
+	A2Lexer.x
+	A2Recogniser.hs
+	test1.m
+	test2.m
+	test3.m
+	test4.m
+	test5.m
+	stack.csh -- edited to include an alias for OP1
+	
 Grammar                            
 =======                            
 	prog -> stmt.
@@ -49,16 +64,5 @@ Grammar
 	rparpart -> RPAR.
 
 
-Files included:
-===============
-	makefile
-	README
-	A2Lexer.x
-	A2Recogniser.hs
-	test1.m
-	test2.m
-	test3.m
-	test4.m
-	test5.m
 	
 	
