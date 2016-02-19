@@ -185,19 +185,7 @@ lexError s = do
          then " before " ++ show (head input)
          else " at end of file"))
 
-
-mlex :: IO (Either String [Lexeme])
-mlex = do
-  putStrLn "Enter the input"
-  s <- getLine 
-  let etok = tokens s
-  case etok of
-    Right a -> do  
-      return (Right a)
-    Left str -> do  
-	  return (Left str)
-
-mlex2 args = do 
+mlex args = do 
 	let fname  = args !! 0 
 	conts <- readFile fname
 	let etok = tokens conts 
@@ -206,6 +194,7 @@ mlex2 args = do
 			putStrLn "\n**************************************\n"
 			putStrLn "The List of tokens are as follows.\n"
 			mapM_ (putStrLn.show) tok
+			putStrLn "\n"
 			return (Right tok)
 		Left msg -> do  
 			return (Left msg)

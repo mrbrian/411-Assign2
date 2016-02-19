@@ -1,0 +1,1 @@
+if (x-1) then x:=x-1 else x:=100

@@ -1,6 +1,4 @@
-/* This program calculates the
-    factorial of the number which
-    is input */
+% block
 
 begin
     input x;                    % input a number .. 

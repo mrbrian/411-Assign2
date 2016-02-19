@@ -1,0 +1,65 @@
+CPSC411 Assignment2
+Brian Yee
+00993104
+T02
+
+Description
+===========
+	Parser/Stack code generator
+	Parses an input file and outputs to specified file name
+
+Usage:
+======
+	./A2Recogniser <input file> <output file>
+		- Parses the given input file and outputs the machine code to the output file
+
+Grammar                            
+=======                            
+	prog -> stmt.
+	stmt -> IF expr thenpart.
+	stmt -> WHILE expr dopart.
+	stmt -> INPUT ID.
+	stmt -> ID ASSIGN expr.
+	stmt -> WRITE expr.
+	stmt -> BEGIN stmtlist endpart.
+	thenpart -> THEN stmt elsepart.
+	elsepart -> ELSE stmt.
+	dopart -> DO stmt.
+	endpart -> END.
+	*stmtlist -> *stmtlist2.
+	*stmtlist2 -> IF expr thenpart semipart
+	*stmtlist2 -> WHILE expr dopart semipart
+	*stmtlist2 -> INPUT ID semipart
+	*stmtlist2 -> ID ASSIGN expr semipart
+	*stmtlist2 -> WRITE expr semipart
+	*stmtlist2 -> BEGIN stmtlist endpart semipart
+	*stmtlist2 -> .
+	semipart -> SEMICOLON stmtlist2.
+	expr -> term *expr2.
+	*expr2 -> ADD term *expr2.
+	*expr2 -> SUB term *expr2.
+	*expr2 -> .
+	term -> factor *term2.
+	*term2 -> MUL factor *term2.
+	*term2 -> DIV factor *term2.
+	*term2 -> .
+	factor -> LPAR expr rparpart.
+	factor -> ID.
+	factor -> NUM.
+	factor -> SUB NUM.
+	rparpart -> RPAR.
+
+
+Files included:
+===============
+	makefile
+	README
+	A2Lexer.x
+	A2Recogniser.hs
+	A2test1.m
+	A2test2.m
+	A2test3.m
+	A2test4.m
+	A2test5.m
+	
+	

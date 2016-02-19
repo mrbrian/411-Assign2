@@ -1,47 +1,16 @@
+--
+-- CPSC411 Assignment2
+-- Brian Yee
+-- 00993104
+-- T02
+-- 
+
 module Main where
 import A2Lexer
 import System.Environment
 import Text.PrettyPrint
 import Text.PrettyPrint.GenericPretty
 
-{-     
-Grammar                            Haskell Code
-=======                            ============
-prog -> stmt.
-stmt -> IF expr thenpart.
-stmt -> WHILE expr dopart.
-stmt -> INPUT ID.
-stmt -> ID ASSIGN expr.
-stmt -> WRITE expr.
-stmt -> BEGIN stmtlist endpart.
-thenpart -> THEN stmt elsepart.
-elsepart -> ELSE stmt.
-dopart -> DO stmt.
-endpart -> END.
-*stmtlist -> *stmtlist2.
-*stmtlist2 -> IF expr thenpart semipart
-*stmtlist2 -> WHILE expr dopart semipart
-*stmtlist2 -> INPUT ID semipart
-*stmtlist2 -> ID ASSIGN expr semipart
-*stmtlist2 -> WRITE expr semipart
-*stmtlist2 -> BEGIN stmtlist endpart semipart
-*stmtlist2 -> .
-semipart -> SEMICOLON stmtlist2.
-expr -> term *expr2.
-*expr2 -> ADD term *expr2.
-*expr2 -> SUB term *expr2.
-*expr2 -> .
-term -> factor *term2.
-*term2 -> MUL factor *term2.
-*term2 -> DIV factor *term2.
-*term2 -> .
-factor -> LPAR expr rparpart.
-factor -> ID.
-factor -> NUM.
-factor -> SUB NUM.
-rparpart -> RPAR.
-
--}
 
 data Stmt a = If (Exp a) (Stmt a) (Stmt a) 		-- datatype for statements  starting with an if ... then ... else statement
 			| While (Exp a) (Stmt a)
@@ -171,7 +140,7 @@ expr2 e (LEX ADD _:ts) = do
 	expr2 (Add e e1) rem1	
 expr2 e (LEX SUB _:ts) = do
 	(rem1, e1) <- term ts
-	expr2 (Neg e1) rem1
+	expr2 (Add e (Neg e1)) rem1
 expr2 e ts = Right (ts, e)
 
 ---------------------------------------------
@@ -215,23 +184,23 @@ rparpart toks = Left $ "Error:In rparpart: Couldn't parse\n" ++ show toks
 ---------------------------------------------
  
 instance (Out a) => Out (Stmt a) where
-  doc (If a b c) = text "If" $$ nest 2 (doc a) 
+  doc (If a b c) = parens $ text "If" $$ nest 2 (doc a) 
                                                     $$ nest 2 (doc b)
                                                     $$ nest 2 (doc c)
-  doc (While a b) = text "While" $$ nest 2 (doc a) 
+  doc (While a b) = parens $ text "While" $$ nest 2 (doc a) 
                                                     $$ nest 2 (doc b)                                                  
-  doc (Assign a b) = text "Assign" $$ nest 2 (doc a)
+  doc (Assign a b) = parens $ text "Assign" $$ nest 2 (doc a)
                                                     $$ nest 2 (doc b)
-  doc (Block a) = text "Block" $$ nest 2 (doc a)
-  doc (Print a) = text "Print" $$ nest 2 (doc a)
-  doc (Input a) = text "Input" $$ nest 2 (doc a)
+  doc (Block a) = parens $ text "Block" $$ nest 2 (doc a)
+  doc (Print a) = parens $ text "Print" $$ nest 2 (doc a)
+  doc (Input a) = parens $ text "Input" $$ nest 2 (doc a)
 
   docPrec _ = doc
 
 ---------------------------------------------
   
 instance (Out a) => Out (Exp a) where
-  doc (Add a b) = parens $ text "Mul" $$ nest 2 (doc a) 
+  doc (Add a b) = parens $ text "Add" $$ nest 2 (doc a) 
                                                     $$ nest 2 (doc b)
   doc (Mul a b) = parens $ text "Mul" $$ nest 2 (doc a) 
                                                     $$ nest 2 (doc b)
@@ -244,24 +213,24 @@ instance (Out a) => Out (Exp a) where
   docPrec _ = doc  
 
 {----------------------------------------------------------------------------------------------  
-	showExp - translates an Exp to a String 
+	showExp - translates an Exp to a machine code string 
 -----------------------------------------------------------------------------------------------}
 
 showExp ::  Exp String -> String
 showExp (Id s) = "rPUSH "++(show s)++"\n"
-showExp (Add a b) = (showExp a)++(showExp b)++"\nOP2 +\n"
-showExp (Mul a b) = (showExp a)++(showExp b)++"\nOP2 *\n"
-showExp (Div a b) = (showExp a)++(showExp b)++"\nOP2 /\n"
-showExp (Neg a) = (showExp a)++"\nOP1 -\n"
+showExp (Add a b) = (showExp a)++(showExp b)++"OP2 +\n"
+showExp (Mul a b) = (showExp a)++(showExp b)++"OP2 *\n"
+showExp (Div a b) = (showExp a)++(showExp b)++"OP2 /\n"
+showExp (Neg a) = (showExp a)++"OP1 -\n"
 showExp (Num i) = "cPUSH "++(show i)++"\n"
 
 {----------------------------------------------------------------------------------------------  
-	showStmt - translates an Stmt to a String 
+	showStmt - translates an Stmt to a machine code string 
 -----------------------------------------------------------------------------------------------}
 
 showStmt ::  Int  ->  Stmt String -> (Int, String)
 showStmt n (If e s1 s2) = 
-	   ( m, (show e) ++"cJUMP label"++(show n)++"\n"
+	   ( m, (showExp e) ++"cJUMP label"++(show n)++"\n"
 						 ++ code1
 						 ++"JUMP label"++(show (n+1))++"\n"
 						 ++"label"++(show n)++":\n"
@@ -277,23 +246,11 @@ showStmt n (While e s) = (n', "label"++(show n)++":\n"
 						 ++ "JUMP label" ++ (show n)++ "\n" )  
       where
 	    (n', code) = showStmt (n+2) s
-{-
-
-check:
-exp
-cJUMP out
-statement
-JUMP check
-out:
-
--}
-
 showStmt n (Block []) = (n, "")
 showStmt n (Block (s:rem)) = (n2, str1 ++ str2)
 	   where 
 	   (n1, str1) = showStmt n s
 	   (n2, str2) = showStmt n1 (Block rem)
-
 showStmt n (Assign s e) = (n, (showExp e)++"LOAD " ++ s ++ "\n" )
 showStmt n (Input (Id s)) = 
 	   ( n, "READ " ++ s ++ "\n" )   
@@ -303,38 +260,26 @@ showStmt n (Print e) =
   
 main = do 
 	args <- getArgs
-	case length args == 0 of
-		True  -> do 
-			output <- mlex
+	case length args == 2 of
+		False  -> do 
+			let usage = "\nExpecting of the form < ./A2Recogniser inputfile outputfile >.\n\nTry again. :(\n"
+			error $ "\n****************Error: Expecting input and output filenames as arguments." ++ usage
+		True -> do
+			output <- mlex args
+			let fname  = args !! 1 
 			case output of 
 				Left lexStr -> putStrLn lexStr
 				Right tokList -> do
 					let parseRes = prog tokList
 					case parseRes of
 						Left str -> putStrLn str
-						Right ([], s) -> do
+						Right ([], ast) -> do
 							putStrLn ("Parse Successful.\n")
 							putStrLn $ "AST is :\n" 
-							pp s				
-							let (n, outStr) = showStmt 0 s
-							writeFile "output" outStr
-						Right (t, _) -> errorMsg t
-		False -> do
-			output <- mlex2 args
-			case output of 
-				Left lexStr -> putStrLn lexStr
-				Right tokList -> do
-					let parseRes = prog tokList
-					case parseRes of
-						Left str -> putStrLn str
-						Right ([], s) -> do
-							putStrLn ("Parse Successful.\n")
-							putStrLn $ "AST is :\n" 
-							pp s
-							let (n, outStr) = showStmt 0 s
-							writeFile "output" outStr
+							pp ast
+							let (n, outStr) = showStmt 0 ast							
+							putStrLn ("Exporting results to: \""++ fname ++"\".\n")
+							writeFile fname outStr
 						Right (t, _) -> errorMsg t
 errorMsg t = putStrLn ("Parse finished with tokens left?\n" ++ show t)
-
--- Fix a-b as a while expression
 
