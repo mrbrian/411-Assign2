@@ -5,14 +5,15 @@ T02
 
 Description
 ===========
-	Parser/Stack code generator	
+	Parser/Stack code generator 
+	- Parses the given input file and outputs the machine code to the output file.
 	- requires GenericPretty library (https://hackage.haskell.org/package/GenericPretty)
 	
 Usage:
 ======
 	make	
 	./A2Recogniser <input file> <output file>
-		- Parses the given input file and outputs the machine code to the output file
+		
 	
 Files included:
 ===============

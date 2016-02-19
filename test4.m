@@ -1,18 +1,16 @@
-% nested loops
+% nested loops    5 cycles of 5
 
 begin
-	y := 100;
-	x := 100;
+	x := 5;
 	while x do
 		begin 
-			x := x-1;
+			y := 5;
 			while y do
 				begin
-					y := y-1;
 					write y;
-				end;
-			write x;
+					y := y-1;
+				end;			
+			x := x-1;
 		end;
-	write (x*y);
 end
 

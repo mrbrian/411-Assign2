@@ -21,7 +21,7 @@ $newline = \n
  
 tokens :-
 	<0> $white+		  		{ skip }
-	<0> "%" .* $newline	 		{ skip }
+	<0> "%" .* 				{ skip }
 	<0> "if" 				{ makeLexeme IF }
 	<0> "then" 				{ makeLexeme THEN }
 	<0> "while" 				{ makeLexeme WHILE }

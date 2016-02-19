@@ -1,6 +1,14 @@
-% handle error when there are leftover tokens
+% loop
 
 begin
-	if (x-1) then x:=x-1 else x:=100;
+	x:=100;
+	y:=1; 
+	if (x) then y:=10 else y := 100;    
+	while (x) 
+	do 
+		begin 
+			x:=x-1; 
+			y:=y+1; 
+		end;
+	write y;
 end
-randomToken := -1
