@@ -1,35 +1,16 @@
- 
-/* 
-     Author: Robin Cockett
-     Purpose: Basic test 1 for the M- scanner
-     Date: 21 Jan 2007
- 
-     Basic nested multi-line comments should work!
-*/
-
-x:= a+b*c
-
-/* 
-
-/*
-     Here is another comment
- */
-
 begin
-  x:=1;
-  y:=2;
-  z:=3;
+	y := 100;
+	x := 100;
+	while x do
+		begin 
+			x := x-1;
+			while y do
+				begin
+					y := y-1;
+					write y;
+				end;
+			write x;
+		end;
+	write (x*y);
 end
-
-/* yet more comments
-
-   v:= w-3;
-
- */
-
-write x;
-
-*/
-
-print y;
 

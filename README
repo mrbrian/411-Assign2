@@ -5,8 +5,7 @@ T02
 
 Description
 ===========
-	Parser/Stack code generator
-	Parses an input file and outputs to specified file name
+	Parser/Stack code generator	
 
 Usage:
 ======
@@ -56,10 +55,10 @@ Files included:
 	README
 	A2Lexer.x
 	A2Recogniser.hs
-	A2test1.m
-	A2test2.m
-	A2test3.m
-	A2test4.m
-	A2test5.m
+	test1.m
+	test2.m
+	test3.m
+	test4.m
+	test5.m
 	
 	

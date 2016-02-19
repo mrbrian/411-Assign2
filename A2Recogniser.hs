@@ -99,8 +99,7 @@ stmtlist2 :: [Stmt String] -> [Lexeme] -> Either String ([Lexeme], [Stmt String]
 stmtlist2 e (LEX IF _:ts) = do
 	(rem1, e1) <- expr ts
 	(rem2, s1, s2) <- thenpart rem1
-	(rem3, es) <- semipart e rem2
-	Right (rem3, e++[If e1 s1 s2])
+	semipart (e++[If e1 s1 s2]) rem2
 stmtlist2 e (LEX WHILE _:ts) = do
 	(rem1, e1) <- expr ts
 	(rem2, s1) <- dopart rem1
@@ -217,45 +216,43 @@ instance (Out a) => Out (Exp a) where
 -----------------------------------------------------------------------------------------------}
 
 showExp ::  Exp String -> String
-showExp (Id s) = "rPUSH "++(show s)++"\n"
-showExp (Add a b) = (showExp a)++(showExp b)++"OP2 +\n"
-showExp (Mul a b) = (showExp a)++(showExp b)++"OP2 *\n"
-showExp (Div a b) = (showExp a)++(showExp b)++"OP2 /\n"
-showExp (Neg a) = (showExp a)++"OP1 -\n"
-showExp (Num i) = "cPUSH "++(show i)++"\n"
+showExp (Id s) = "\trPUSH "++ s ++"\n"
+showExp (Add a b) = (showExp a)++(showExp b)++"\tOP2 +\n"
+showExp (Mul a b) = (showExp a)++(showExp b)++"\tOP2 *\n"
+showExp (Div a b) = (showExp a)++(showExp b)++"\tOP2 /\n"
+showExp (Neg a) = (showExp a)++"\tOP1 -\n"
+showExp (Num i) = "\tcPUSH "++(show i)++"\n"
 
 {----------------------------------------------------------------------------------------------  
 	showStmt - translates an Stmt to a machine code string 
 -----------------------------------------------------------------------------------------------}
 
 showStmt ::  Int  ->  Stmt String -> (Int, String)
-showStmt n (If e s1 s2) = 
-	   ( m, (showExp e) ++"cJUMP label"++(show n)++"\n"
+showStmt n (If e s1 s2) = ( m, (showExp e) ++"\tcJUMP L"++(show n)++"\n"
 						 ++ code1
-						 ++"JUMP label"++(show (n+1))++"\n"
-						 ++"label"++(show n)++":\n"
+						 ++"\tJUMP L"++(show (n+1))++"\n"
+						 ++"L"++(show n)++":\n"
 						 ++code2
-						 ++"label"++(show (n+1))++":\n"
-		 )   where
+						 ++"L"++(show (n+1))++":\n")   
+	  where
 	  (n',code1) = showStmt (n+2) s1
 	  (m, code2) = showStmt n' s2
-showStmt n (While e s) = (n', "label"++(show n)++":\n"
+showStmt n (While e s) = (n', "L"++(show n)++":\n"
 						 ++ (showExp e)
-						 ++ "cJUMP label"++(show (n+1))++"\n"
+						 ++ "\tcJUMP L"++(show (n+1))++"\n"
 						 ++ code
-						 ++ "JUMP label" ++ (show n)++ "\n" )  
+						 ++ "\tJUMP L" ++ (show n)++ "\n"
+						 ++ "L"++ (show (n+1)) ++ ":\n" )  
       where
-	    (n', code) = showStmt (n+2) s
+	  (n', code) = showStmt (n+2) s
 showStmt n (Block []) = (n, "")
 showStmt n (Block (s:rem)) = (n2, str1 ++ str2)
-	   where 
-	   (n1, str1) = showStmt n s
-	   (n2, str2) = showStmt n1 (Block rem)
-showStmt n (Assign s e) = (n, (showExp e)++"LOAD " ++ s ++ "\n" )
-showStmt n (Input (Id s)) = 
-	   ( n, "READ " ++ s ++ "\n" )   
-showStmt n (Print e) = 
-	   ( n, (showExp e)++"PRINT\n" )   
+	  where 
+	  (n1, str1) = showStmt n s
+	  (n2, str2) = showStmt n1 (Block rem)
+showStmt n (Assign s e) = (n, (showExp e)++"\tLOAD " ++ s ++ "\n" )
+showStmt n (Input (Id s)) = ( n, "\tREAD " ++ s ++ "\n" )   
+showStmt n (Print e) = ( n, (showExp e)++"\tPRINT\n" )   
 	   
   
 main = do 
@@ -277,7 +274,7 @@ main = do
 							putStrLn ("Parse Successful.\n")
 							putStrLn $ "AST is :\n" 
 							pp ast
-							let (n, outStr) = showStmt 0 ast							
+							let (n, outStr) = showStmt 1 ast							
 							putStrLn ("Exporting results to: \""++ fname ++"\".\n")
 							writeFile fname outStr
 						Right (t, _) -> errorMsg t
