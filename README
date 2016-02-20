@@ -96,7 +96,7 @@ Transformed into Recursive Descent Grammar:
 			| .
 	semipart -> SEMICOLON stmtlist2.
 	expr -> term expr2.
-	*expr2 -> ADD term expr2.
+	expr2 -> ADD term expr2.
 			| SUB term expr2.
 			| .
 	term -> factor term2.
