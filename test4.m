@@ -1,4 +1,4 @@
-% nested loops    5 cycles of 5
+% testing nested loops    5 cycles of 5
 
 begin
 	x := 5;

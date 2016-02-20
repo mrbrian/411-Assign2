@@ -1,4 +1,4 @@
-% try everything, just doing random stuff
+% test every token, doing some random computations
 
 begin
 	y := 0;

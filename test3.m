@@ -1,4 +1,4 @@
-% loop
+% testing the while loop
 
 begin
 	x:=100;
