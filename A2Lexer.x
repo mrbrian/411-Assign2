@@ -10,7 +10,8 @@ module A2Lexer where
 
 import Data.Char (chr)
 import System.Environment
-
+import System.IO  
+import System.Directory 
 }
 
 %wrapper "monad"
@@ -187,7 +188,11 @@ lexError s = do
 
 mlex args = do 
 	let fname  = args !! 0 
-	conts <- readFile fname
-	let etok = tokens conts 
-	return (etok)
+	fileExists <- doesFileExist fname		-- check if file exists  
+	if fileExists  
+			then do 
+				conts <- readFile fname
+				let etok = tokens conts 
+				return (etok)				-- return token list
+			else (error ("Input file not found."))	-- report error
 }
